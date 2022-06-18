@@ -57,24 +57,19 @@ void test_chacha20_poly1305(const char *text_key, const char *text_nonce, const 
 /**
  * @brief Benchmark of Chacha20 algorithm
  */
-void benchmark_chacha(const char *text_key, const char *text_nonce, const char *text_plain) {
+void benchmark_chacha(char *str) {
+  uint8_t text_key[32] = "12345678901234567890123456789012";
+  uint8_t nonce[8] = "12345678";
   chacha20_ctx ctx;
-  uint8_t chacha_key[32];
-  uint8_t nonce[8];
-  uint32_t len = strlen(text_plain) / 2;
-  uint8_t *plain = alloca(len);
+  uint32_t len = 1000;
   uint8_t *output = alloca(len);
-  hex2byte(text_key, chacha_key);
-  hex2byte(text_nonce, nonce);
-  hex2byte(text_plain, plain);
-  chacha20_setup(&ctx, chacha_key, sizeof(chacha_key), nonce);
   memset(output, 0, len);
-  // benchmark encryption
-  printf("Starting chacha benchmark\n");
+  chacha20_setup(&ctx, text_key, sizeof(text_key), nonce);
+
   for (int j = 0; j < 10; j++) {
     clock_t t = clock();
     for (int i = 0; i < 1000; i++) {
-      chacha20_encrypt_bytes(&ctx, plain, output, len);
+      chacha20_encrypt_bytes(&ctx, (uint8_t*)str, output, len);
     }
     t = clock() - t;
     double time_spent = (double)t / CLOCKS_PER_SEC;
@@ -118,9 +113,12 @@ void app_main(void) {
   test_chacha_run();
   test_poly1305();
   test_chacha20_poly1305("0000000000000000000000000000000000000000000000000000000000000000", "0000000000000000", "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 0);
-  benchmark_chacha("0000000000000000000000000000000000000000000000000000000000000000", "0000000000000000", str);
+  benchmark_chacha(str);
+  vTaskDelay(10 / portTICK_PERIOD_MS); // delay to prevent FreeRTOS throw due to unresponsive function
   benchmark_poly(str);
-  for (int i = 10; i >= 0; i--) {
+
+  // wait 5sec and restart
+  for (int i = 5; i >= 0; i--) {
     printf("Restarting in %d seconds...\n", i);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
